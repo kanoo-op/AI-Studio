@@ -23,6 +23,11 @@
           <span class="mode-name">댄스 챌린지</span>
           <span class="mode-desc">레퍼런스를 보고 댄스를 따라하세요</span>
         </button>
+        <button class="mode-card" id="btn-mode-mv">
+          <span class="mode-icon">&#127908;</span>
+          <span class="mode-name">뮤직비디오</span>
+          <span class="mode-desc">나만의 숏폼 뮤직비디오 만들기</span>
+        </button>
       </div>
     </div>
 
@@ -173,6 +178,70 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- ============ 뮤직비디오 ============ -->
+    <div id="mv-screen" class="hidden">
+
+      <!-- 설정 패널 -->
+      <div id="mv-setup-panel">
+        <h2 class="dance-section-title">뮤직비디오 만들기</h2>
+
+        <div class="mv-setup-row">
+          <span class="mv-label">음악</span>
+          <label class="btn btn-upload" for="mv-music-input">MP3 업로드</label>
+          <input type="file" id="mv-music-input" accept="audio/*" class="hidden" />
+          <span id="mv-music-name" class="mv-file-name">선택 안 됨</span>
+        </div>
+
+        <div class="mv-setup-row">
+          <span class="mv-label">배경</span>
+          <div id="mv-bg-list" class="mv-bg-grid">
+            <button class="mv-bg-btn active" data-bg="dark">어두운</button>
+            <button class="mv-bg-btn" data-bg="gradient">그라데이션</button>
+            <button class="mv-bg-btn" data-bg="neon">네온</button>
+            <button class="mv-bg-btn" data-bg="stage">스테이지</button>
+          </div>
+        </div>
+
+        <div class="mv-setup-row">
+          <span class="mv-label">아바타</span>
+          <div id="mv-avatar-list" class="dance-avatar-grid"></div>
+        </div>
+
+        <div class="dance-action-row">
+          <button id="btn-mv-start" class="btn btn-start" disabled>녹화 시작!</button>
+        </div>
+        <button id="btn-mv-back" class="btn btn-secondary dance-back-btn">메인으로</button>
+      </div>
+
+      <!-- 녹화 중 화면 -->
+      <div id="mv-record-panel" class="hidden">
+        <canvas id="mv-canvas"></canvas>
+        <div id="mv-hud">
+          <button id="btn-mv-stop" class="hud-back-btn">&#9632; 녹화 중지</button>
+          <span id="mv-rec-badge" class="mv-rec-badge">&#9679; REC</span>
+          <span id="mv-rec-timer" class="hud-timer">0:00</span>
+        </div>
+        <!-- 웹캠 PIP -->
+        <div id="mv-webcam-container" class="mv-pip">
+          <video id="mv-webcam" autoplay playsinline></video>
+        </div>
+      </div>
+
+      <!-- 완료 패널 -->
+      <div id="mv-done-panel" class="hidden">
+        <div class="result-card">
+          <h2 class="result-title">뮤직비디오 완성!</h2>
+          <video id="mv-preview" class="mv-preview" controls></video>
+          <div class="result-actions">
+            <a id="btn-mv-download" class="btn btn-start" download="my-music-video.webm">다운로드</a>
+            <button id="btn-mv-retry" class="btn btn-secondary">다시 찍기</button>
+            <button id="btn-mv-done-main" class="btn btn-secondary">메인으로</button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
   </div>

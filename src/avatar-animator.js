@@ -204,7 +204,54 @@ function getSquatAmount(pose3D) {
   return Math.max(0, Math.min(1, bend / 1.2));
 }
 
-// ── rigRotation / rigPosition (원본 KalidoKit 방식) ──
+// ══════════════════════════════════════
+// One Euro Filter — 떨림 제거 + 빠른 동작 추적
+// minCutoff 높을수록 떨림 허용 (반응 빠름)
+// beta 높을수록 빠른 동작 추적 잘됨
+// ══════════════════════════════════════
+class OneEuroFilter {
+  constructor(minCutoff = 1.0, beta = 0.007, dCutoff = 1.0) {
+    this.minCutoff = minCutoff;
+    this.beta = beta;
+    this.dCutoff = dCutoff;
+    this.xPrev = null;
+    this.dxPrev = 0;
+    this.tPrev = null;
+  }
+  filter(x, t) {
+    if (this.tPrev === null) { this.xPrev = x; this.tPrev = t; return x; }
+    const dt = t - this.tPrev;
+    if (dt <= 0) return this.xPrev;
+    const dx = (x - this.xPrev) / dt;
+    const aD = this._a(dt, this.dCutoff);
+    const edx = aD * dx + (1 - aD) * this.dxPrev;
+    const cutoff = this.minCutoff + this.beta * Math.abs(edx);
+    const aX = this._a(dt, cutoff);
+    const result = aX * x + (1 - aX) * this.xPrev;
+    this.xPrev = result; this.dxPrev = edx; this.tPrev = t;
+    return result;
+  }
+  _a(dt, cutoff) { const tau = 1/(2*Math.PI*cutoff); return 1/(1+tau/dt); }
+}
+
+// 본별 x/y/z 개별 필터 (자동 생성)
+const _filters = {};
+function getOneEuro(boneName, axis) {
+  const key = `${boneName}_${axis}`;
+  if (!_filters[key]) _filters[key] = new OneEuroFilter(1.5, 0.01, 1.0);
+  return _filters[key];
+}
+
+function filterBoneRotation(name, rx, ry, rz) {
+  const t = performance.now() / 1000;
+  return {
+    x: getOneEuro(name, 'x').filter(rx, t),
+    y: getOneEuro(name, 'y').filter(ry, t),
+    z: getOneEuro(name, 'z').filter(rz, t),
+  };
+}
+
+// ── rigRotation / rigPosition ──
 function rigRotation(vrm, name, rotation={x:0,y:0,z:0}, dampener=1, lerpAmount=0.3) {
   if (!vrm?.humanoid) return;
   const bone = vrm.humanoid.getNormalizedBoneNode(toBoneName(name));
@@ -212,6 +259,9 @@ function rigRotation(vrm, name, rotation={x:0,y:0,z:0}, dampener=1, lerpAmount=0
   rotation = applyCalibratedRotation(name, rotation);
   let rx=rotation.x*dampener, ry=rotation.y*dampener, rz=rotation.z*dampener;
   if (isVRM1(vrm)) { rx=-rx; rz=-rz; }
+  // One Euro Filter 적용 (떨림 제거)
+  const f = filterBoneRotation(name, rx, ry, rz);
+  rx = f.x; ry = f.y; rz = f.z;
   const euler = new THREE.Euler(rx,ry,rz,rotation.rotationOrder||'XYZ');
   const quat = new THREE.Quaternion().setFromEuler(euler);
   bone.quaternion.slerp(quat, lerpAmount);

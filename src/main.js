@@ -4,6 +4,7 @@ import { loadVRM, disposeVRM } from './vrm-loader.js';
 import { initHolistic, startCamera, stopCamera } from './motion-capture.js';
 import { animateVRM, startCalibration, resetCalibration, isCalibrated } from './avatar-animator.js';
 import { initDanceChallenge, showDanceChallenge, hideDanceUI, updateUserLandmarks } from './dance-challenge.js';
+import { initMusicVideo, showMusicVideo, hideMusicVideo } from './music-video.js';
 
 // ── 아바타 목록 ──
 // rotationY: vrm-loader가 Math.PI를 적용한 뒤 추가 보정값 (2,3,4번은 정면 반전)
@@ -31,8 +32,10 @@ const btnCalibrateReset = document.getElementById('btn-calibrate-reset');
 const avatarList = document.getElementById('avatar-list');
 const btnBackMain = document.getElementById('btn-back-main');
 
+const mvScreen = document.getElementById('mv-screen');
 const btnModeStudio = document.getElementById('btn-mode-studio');
 const btnModedance = document.getElementById('btn-mode-dance');
+const btnModeMV = document.getElementById('btn-mode-mv');
 const btnDanceBack = document.getElementById('btn-dance-back');
 
 // ── 상태 ──
@@ -200,7 +203,9 @@ function showModeSelect() {
   modeSelectScreen.classList.remove('hidden');
   studioScreen.classList.add('hidden');
   danceScreen.classList.add('hidden');
+  mvScreen.classList.add('hidden');
   hideDanceUI();
+  hideMusicVideo();
   stopDanceRenderer();
 }
 
@@ -209,6 +214,7 @@ async function enterStudioMode() {
   modeSelectScreen.classList.add('hidden');
   studioScreen.classList.remove('hidden');
   danceScreen.classList.add('hidden');
+  mvScreen.classList.add('hidden');
 
   stopDanceRenderer();
 
@@ -398,11 +404,66 @@ function doCalibrateReset() {
   btnCalibrateReset.style.display = 'none';
 }
 
+// ── 뮤직비디오 모드 ──
+async function enterMVMode() {
+  currentMode = 'mv';
+  modeSelectScreen.classList.add('hidden');
+  studioScreen.classList.add('hidden');
+  danceScreen.classList.add('hidden');
+  mvScreen.classList.remove('hidden');
+
+  if (!isInitialized) {
+    showOverlay();
+    setStatus('초기화 중...');
+    await initCore();
+    buildAvatarSelector(avatarList);
+    hideOverlay();
+  }
+
+  // MV용 아바타 선택
+  const mvAvatarList = document.getElementById('mv-avatar-list');
+  buildAvatarSelector(mvAvatarList);
+
+  // 뮤직비디오 모듈 초기화
+  initMusicVideo({
+    mvScreen,
+    setupPanel: document.getElementById('mv-setup-panel'),
+    recordPanel: document.getElementById('mv-record-panel'),
+    donePanel: document.getElementById('mv-done-panel'),
+    musicInput: document.getElementById('mv-music-input'),
+    musicName: document.getElementById('mv-music-name'),
+    bgList: document.getElementById('mv-bg-list'),
+    mvCanvas: document.getElementById('mv-canvas'),
+    btnStart: document.getElementById('btn-mv-start'),
+    btnStop: document.getElementById('btn-mv-stop'),
+    btnRetry: document.getElementById('btn-mv-retry'),
+    btnDownload: document.getElementById('btn-mv-download'),
+    btnDoneMain: document.getElementById('btn-mv-done-main'),
+    preview: document.getElementById('mv-preview'),
+    recTimer: document.getElementById('mv-rec-timer'),
+  }, {
+    onBackToMain: showModeSelect,
+    onAvatarSwitch: switchAvatar,
+    getRenderer: () => sceneObjects?.renderer,
+    getScene: () => sceneObjects?.scene,
+    getCamera: () => sceneObjects?.camera,
+  });
+
+  showMusicVideo();
+
+  // 카메라 자동 시작
+  if (!isCameraRunning && holistic) {
+    await startCameraSession();
+  }
+}
+
 // ── 이벤트 리스너 ──
 btnModeStudio.addEventListener('click', enterStudioMode);
 btnModedance.addEventListener('click', enterDanceMode);
+btnModeMV.addEventListener('click', enterMVMode);
 btnBackMain.addEventListener('click', showModeSelect);
 btnDanceBack.addEventListener('click', showModeSelect);
+document.getElementById('btn-mv-back').addEventListener('click', showModeSelect);
 btnCalibrate.addEventListener('click', doCalibration);
 btnCalibrateReset.addEventListener('click', doCalibrateReset);
 
