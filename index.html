@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Interactive Zone</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- ============ 모드 선택 화면 ============ -->
+    <div id="mode-select-screen">
+      <h1 class="mode-title">AI Interactive Zone</h1>
+      <div class="mode-cards">
+        <button class="mode-card" id="btn-mode-studio">
+          <span class="mode-icon">&#127917;</span>
+          <span class="mode-name">아바타 스튜디오</span>
+          <span class="mode-desc">VRM 아바타로 실시간 모션캡처</span>
+        </button>
+        <button class="mode-card" id="btn-mode-dance">
+          <span class="mode-icon">&#128131;</span>
+          <span class="mode-name">댄스 챌린지</span>
+          <span class="mode-desc">레퍼런스를 보고 댄스를 따라하세요</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ============ 아바타 스튜디오 ============ -->
+    <div id="studio-screen" class="hidden">
+      <!-- 상태 오버레이 -->
+      <div id="status-overlay">
+        <div class="spinner"></div>
+        <p id="status-text">로딩 중...</p>
+      </div>
+
+      <!-- 3D 아바타 캔버스 -->
+      <canvas id="avatar-canvas"></canvas>
+
+      <!-- 웹캠 PIP -->
+      <div id="webcam-container">
+        <video id="webcam" autoplay playsinline></video>
+        <div id="webcam-label">CAM</div>
+      </div>
+
+      <!-- 하단 컨트롤 바 -->
+      <div id="controls">
+        <div class="control-row">
+          <div class="control-group">
+            <span class="control-label">아바타</span>
+            <div id="avatar-list"></div>
+          </div>
+        </div>
+        <div class="control-row">
+          <div class="control-group">
+            <span class="control-label">상태</span>
+            <span id="tracking-status" class="badge badge-off">대기</span>
+            <span id="fps-counter" class="badge">-- FPS</span>
+          </div>
+          <div class="control-group">
+            <button id="btn-back-main" class="btn btn-secondary">메인으로</button>
+            <button id="btn-calibrate" class="btn btn-calibrate" disabled>캘리브레이션</button>
+            <button id="btn-calibrate-reset" class="btn btn-secondary" style="display:none;">초기화</button>
+            <button id="btn-toggle-cam" class="btn">카메라 시작</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 댄스 챌린지 ============ -->
+    <div id="dance-screen" class="hidden">
+
+      <!-- 댄스 선택 패널 -->
+      <div id="dance-selection-panel">
+        <h2 class="dance-section-title">챌린지를 선택하세요</h2>
+        <div id="dance-list" class="dance-select-grid"></div>
+
+        <h3 class="dance-section-subtitle">아바타 선택</h3>
+        <div id="dance-avatar-list" class="dance-avatar-grid"></div>
+
+        <div class="dance-action-row">
+          <button id="btn-dance-record" class="btn btn-record">커스텀 녹화</button>
+          <label class="btn btn-upload" for="video-upload-input">영상 업로드</label>
+          <input type="file" id="video-upload-input" accept="video/mp4,video/*" class="hidden" />
+          <button id="btn-dance-start" class="btn btn-start">시작!</button>
+        </div>
+
+        <!-- 영상 처리 진행 표시 -->
+        <div id="video-extract-overlay" class="hidden">
+          <div class="spinner"></div>
+          <p id="video-extract-status">영상 분석 중...</p>
+          <div id="video-extract-bar-container">
+            <div id="video-extract-bar"></div>
+          </div>
+        </div>
+
+        <button id="btn-dance-back" class="btn btn-secondary dance-back-btn">메인으로</button>
+      </div>
+
+      <!-- 챌린지 진행 패널 -->
+      <div id="dance-play-panel" class="hidden">
+        <!-- HUD -->
+        <div id="dance-hud">
+          <button id="btn-dance-stop" class="hud-back-btn">&#9664; 그만하기</button>
+          <span id="hud-score" class="hud-score">0</span>
+          <span id="hud-combo" class="hud-combo"></span>
+          <span id="hud-timer" class="hud-timer">--</span>
+          <label class="hud-label hidden" id="hud-start-label">시작:
+            <input type="number" id="hud-start-time" class="hud-input" value="0" min="0" step="1" />초
+          </label>
+          <select id="hud-speed" class="hud-speed hidden">
+            <option value="0.25">0.25x</option>
+            <option value="0.5">0.5x</option>
+            <option value="0.75">0.75x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2">2x</option>
+          </select>
+        </div>
+
+        <!-- 메인 영역: 좌-레퍼런스, 우-VRM -->
+        <div id="dance-stage">
+          <div id="ref-canvas-container" class="stage-half">
+            <canvas id="ref-canvas"></canvas>
+            <video id="ref-video" class="hidden" muted playsinline></video>
+            <div class="stage-label">레퍼런스</div>
+          </div>
+          <div id="vrm-canvas-container" class="stage-half">
+            <canvas id="dance-avatar-canvas"></canvas>
+            <div class="stage-label">나</div>
+          </div>
+        </div>
+
+        <!-- 스코어바 -->
+        <div id="score-bar-container">
+          <div id="score-bar"></div>
+        </div>
+
+        <!-- 웹캠 (숨긴 상태로 MediaPipe에 사용) -->
+        <video id="dance-webcam" class="hidden-video" autoplay playsinline></video>
+      </div>
+
+      <!-- 결과 패널 -->
+      <div id="dance-result-panel" class="hidden">
+        <div class="result-card">
+          <h2 class="result-title">댄스 챌린지 결과!</h2>
+
+          <div class="result-score-display">
+            <span class="result-label">최종 점수</span>
+            <span id="result-score" class="result-big-score">0</span>
+          </div>
+
+          <div id="result-grade" class="result-grade">--</div>
+
+          <div class="result-stats">
+            <div class="result-stat">
+              <span class="stat-label">최고 콤보</span>
+              <span id="result-combo" class="stat-value">x0</span>
+            </div>
+            <div class="result-stat">
+              <span class="stat-label">평균 점수</span>
+              <span id="result-avg" class="stat-value">0</span>
+            </div>
+          </div>
+
+          <div class="result-graph-label">구간별 점수</div>
+          <div id="result-graph" class="result-graph"></div>
+
+          <div class="result-actions">
+            <button id="btn-retry" class="btn btn-start">다시 하기</button>
+            <button id="btn-result-main" class="btn btn-secondary">메인으로</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

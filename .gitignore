@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.DS_Store
+*.local
+
+# VRM 모델 파일 (대용량)
+public/models/*.vrm
+
+# MediaPipe 로컬 WASM (대용량, npm에서 복사)
+public/mediapipe/
+
+# 댄스 레퍼런스 영상 (대용량)
+*.mp4
+
+# Claude Code
+.claude/
